@@ -3,6 +3,7 @@ from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import tensorflow as tf
 import warnings
+import string
 warnings.simplefilter("ignore")
 dataPure=pd.read_csv("Language Detection.csv",encoding="utf-8")
 dataPure=dataPure.sample(frac=1).reset_index(drop=True)
@@ -13,7 +14,13 @@ for i in range(len(dataPure.iloc[::])):
         mask.append(True)
     else:
         mask.append(False)
-datax=list(map(lambda x:x.split(),dataPure.Text[mask]))
+def clean_text(text):
+    wordss=text.split()
+    table = str.maketrans('','', string.punctuation)
+    wordss=[word.translate(table) for word in wordss]
+    ss=[word.lower() for word in wordss if word.isalpha()]
+    return ss
+datax=list(map(clean_text,dataPure.Text[mask]))
 datay=dataPure.Language[mask]
 labels=datay.unique()
 datay=tf.keras.utils.to_categorical(LabelEncoder().fit_transform(datay))
@@ -31,5 +38,5 @@ model=tf.keras.Sequential([
 inp=input("Write Something: ")
 model.compile(optimizer=tf.keras.optimizers.Adam(),metrics=[tf.keras.metrics.CategoricalAccuracy(),tf.keras.metrics.Recall()],loss=tf.keras.losses.CategoricalCrossentropy())
 model.fit(datax,datay,batch_size=128,epochs=20)
-index=(tf.argmax(model.predict(tf.keras.utils.pad_sequences(tokenizer.texts_to_sequences([inp.split()]),MAX),batch_size=1),1))
+index=(tf.argmax(model.predict(tf.keras.utils.pad_sequences(tokenizer.texts_to_sequences([clean_text(inp)]),MAX),batch_size=1),1))
 print(sorted(labels)[int(index.numpy())])
